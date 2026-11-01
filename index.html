@@ -1,0 +1,1404 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>นักสืบจอมเปรียบเทียบ - Python Comparison</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Kanit', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            overflow-x: hidden;
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #3b82f6; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #2563eb; }
+
+        /* Game Area Styles - Tower Defense */
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 460px;
+            background-image: url('images/bg_img.png');
+            background-size: cover;
+            background-position: center bottom;
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: crosshair;
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.45);
+            border: 2px solid rgba(59, 130, 246, 0.3);
+            user-select: none;
+        }
+
+        /* Laser Sight Line */
+        #aim-laser {
+            position: absolute;
+            height: 2px;
+            background: repeating-linear-gradient(
+                90deg,
+                rgba(56, 189, 248, 0.75) 0px,
+                rgba(56, 189, 248, 0.75) 6px,
+                transparent 6px,
+                transparent 12px
+            );
+            transform-origin: left center;
+            pointer-events: none;
+            z-index: 19;
+            display: none;
+        }
+
+        /* Fortress & Turret on the Left */
+        #tower-base {
+            position: absolute;
+            bottom: 24px;
+            left: 24px;
+            width: 96px;
+            height: 115px;
+            background: linear-gradient(180deg, #475569 0%, #1e293b 100%);
+            border-radius: 14px 14px 6px 6px;
+            border: 4px solid #0f172a;
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            pointer-events: none;
+        }
+        .tower-battlements {
+            display: flex;
+            justify-content: space-between;
+            width: 108px;
+            margin-top: -12px;
+        }
+        .tower-merlon {
+            width: 22px;
+            height: 14px;
+            background: #64748b;
+            border: 3px solid #0f172a;
+            border-radius: 4px 4px 0 0;
+        }
+        #turret-dome {
+            position: absolute;
+            top: 18px;
+            right: -8px;
+            width: 44px;
+            height: 44px;
+            background: radial-gradient(circle at 35% 35%, #38bdf8, #0284c7);
+            border: 3px solid #0f172a;
+            border-radius: 50%;
+            z-index: 22;
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.6);
+        }
+        #cannon-barrel {
+            position: absolute;
+            top: 32px;
+            left: 62px;
+            width: 58px;
+            height: 18px;
+            background: linear-gradient(90deg, #334155, #64748b);
+            border: 3px solid #0f172a;
+            border-radius: 0 10px 10px 0;
+            transform-origin: left center;
+            z-index: 21;
+            transition: transform 0.03s linear;
+        }
+        #cannon-barrel::after {
+            content: '';
+            position: absolute;
+            right: -4px;
+            top: -3px;
+            width: 10px;
+            height: 18px;
+            background: #38bdf8;
+            border: 2px solid #0f172a;
+            border-radius: 3px;
+        }
+
+        /* Danger Zone Line */
+        #defense-line {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 135px;
+            width: 3px;
+            background: repeating-linear-gradient(
+                to bottom,
+                rgba(239, 68, 68, 0.65) 0px,
+                rgba(239, 68, 68, 0.65) 10px,
+                transparent 10px,
+                transparent 20px
+            );
+            z-index: 8;
+            pointer-events: none;
+        }
+
+        /* TD Enemies carrying True / False */
+        .td-enemy {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            z-index: 15;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            pointer-events: none;
+        }
+        .td-enemy-sign {
+            color: #ffffff;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 1rem;
+            font-weight: 800;
+            padding: 4px 14px;
+            border-radius: 9999px;
+            white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.45);
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .td-sign-true {
+            background: linear-gradient(135deg, #22c55e, #15803d);
+            border: 2px solid #bbf7d0;
+        }
+        .td-sign-false {
+            background: linear-gradient(135deg, #ef4444, #b91c1c);
+            border: 2px solid #fecaca;
+        }
+        .td-enemy-body {
+            width: 56px;
+            height: 46px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+            box-shadow: 0 6px 14px rgba(0,0,0,0.4);
+            border: 2px solid rgba(255,255,255,0.6);
+        }
+
+        /* Projectiles & Floating FX */
+        .player-bullet {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: radial-gradient(circle, #fef08a 20%, #38bdf8 80%);
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            z-index: 25;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 14px #38bdf8;
+        }
+        .enemy-bullet {
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            background: radial-gradient(circle, #fecaca 10%, #ef4444 80%);
+            border: 2px solid #fca5a5;
+            border-radius: 50%;
+            z-index: 24;
+            box-shadow: 0 0 12px #ef4444;
+            transform: translate(-50%, -50%);
+        }
+        .floating-text {
+            position: absolute;
+            font-weight: 800;
+            font-size: 1.1rem;
+            pointer-events: none;
+            z-index: 28;
+            transform: translate(-50%, -50%);
+            text-shadow: 0 2px 6px rgba(0,0,0,0.85);
+            animation: floatUp 0.9s ease-out forwards;
+        }
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translate(-50%, -50%) scale(0.8); }
+            30% { opacity: 1; transform: translate(-50%, -80%) scale(1.1); }
+            100% { opacity: 0; transform: translate(-50%, -130%) scale(1); }
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-6px); }
+            75% { transform: translateX(6px); }
+        }
+        .animate-shake { animation: shake 0.25s ease-in-out; }
+
+        /* Animations */
+        @keyframes pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        .animate-pop { animation: pop 0.3s ease-in-out; }
+
+        /* Hide sections initially */
+        .section-content { display: none; }
+        .section-content.active { display: block; animation: fadeIn 0.5s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Navbar -->
+    <nav class="glass-panel sticky top-0 z-50 shadow-lg">
+        <div class="max-w-6xl mx-auto px-4">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-brands fa-python text-blue-400 text-3xl"></i>
+                    <span class="font-bold text-xl tracking-wider">Python<span class="text-blue-400">Logic</span></span>
+                </div>
+                <div class="flex space-x-1 sm:space-x-4">
+                    <button onclick="switchTab('knowledge')" id="nav-knowledge" class="nav-btn px-3 py-2 rounded-md text-sm font-medium transition-colors text-blue-400 bg-blue-400/10"><i class="fa-solid fa-book mr-1"></i> ใบความรู้</button>
+                    <button onclick="switchTab('game')" id="nav-game" class="nav-btn px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-300 hover:text-white hover:bg-slate-700"><i class="fa-solid fa-gamepad mr-1"></i> มินิเกม</button>
+                    <button onclick="switchTab('quiz')" id="nav-quiz" class="nav-btn px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-300 hover:text-white hover:bg-slate-700"><i class="fa-solid fa-list-check mr-1"></i> แบบทดสอบ</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-6xl mx-auto w-full px-4 py-8">
+        
+        <!-- SECTION 1: KNOWLEDGE BASE -->
+        <section id="knowledge" class="section-content active">
+            <div class="text-center mb-6">
+                <h1 class="text-3xl md:text-4xl font-bold mb-2"><i class="fa-solid fa-book-open text-blue-400 mr-2"></i> ใบความรู้แบบสไลด์</h1>
+                <p class="text-slate-400">เรียนรู้ทีละสเต็ป กดลูกศรเพื่อเปลี่ยนหน้า</p>
+            </div>
+
+            <div class="max-w-4xl mx-auto glass-panel rounded-2xl overflow-hidden shadow-2xl border border-slate-700 flex flex-col min-h-[450px]">
+                
+                <!-- Slides Container -->
+                <div class="relative flex-grow flex items-center justify-center p-8 overflow-hidden bg-slate-900/50">
+                    
+                    <!-- Slide 1: Title -->
+                    <div class="k-slide flex-col items-center text-center animate-fadeIn w-full">
+                        <i class="fa-brands fa-python text-6xl text-blue-400 mb-6"></i>
+                        <h2 class="text-4xl md:text-5xl font-bold mb-4">ตัวดำเนินการเปรียบเทียบ</h2>
+                        <h3 class="text-2xl text-blue-300">(Comparison Operators)</h3>
+                        <p class="mt-6 text-lg text-slate-400 max-w-lg mx-auto">หัวใจสำคัญของการสร้างเงื่อนไขในภาษา Python ที่ใช้สอนให้คอมพิวเตอร์รู้จัก "คิด" และ "ตัดสินใจ"</p>
+                    </div>
+
+                    <!-- Slide 2: Concept -->
+                    <div class="k-slide hidden flex-col items-center text-center animate-fadeIn w-full">
+                        <i class="fa-solid fa-code-branch text-5xl text-emerald-400 mb-6"></i>
+                        <h2 class="text-3xl font-bold mb-4">คอมพิวเตอร์ตัดสินใจอย่างไร?</h2>
+                        <p class="text-xl text-slate-300 mb-6 max-w-xl mx-auto leading-relaxed">
+                            ในการเขียนโปรแกรม เรามักต้องให้ระบบเลือกทำสิ่งต่างๆ ตามเงื่อนไข เช่น <br>
+                            <span class="text-yellow-400">"ถ้ามีเงินมากกว่าราคาสินค้า ให้ซื้อได้"</span>
+                        </p>
+                        <p class="text-lg text-slate-400">เราจึงต้องใช้ <strong>ตัวดำเนินการเปรียบเทียบ</strong> เพื่อนำข้อมูล 2 ฝั่งมาเทียบกัน</p>
+                    </div>
+
+                    <!-- Slide 3: Boolean -->
+                    <div class="k-slide hidden flex-col items-center text-center animate-fadeIn w-full">
+                        <h2 class="text-3xl font-bold mb-8">ผลลัพธ์มีแค่ 2 สถานะ (Boolean)</h2>
+                        <div class="flex flex-col sm:flex-row gap-8 justify-center w-full max-w-2xl">
+                            <div class="bg-emerald-500/20 border-2 border-emerald-500 p-6 rounded-xl flex-1">
+                                <i class="fa-solid fa-check text-5xl text-emerald-400 mb-4"></i>
+                                <h3 class="text-3xl font-bold text-emerald-400 mb-2">True</h3>
+                                <p class="text-slate-300">เมื่อเงื่อนไขเป็น <strong class="text-white">จริง</strong></p>
+                            </div>
+                            <div class="bg-red-500/20 border-2 border-red-500 p-6 rounded-xl flex-1">
+                                <i class="fa-solid fa-xmark text-5xl text-red-400 mb-4"></i>
+                                <h3 class="text-3xl font-bold text-red-400 mb-2">False</h3>
+                                <p class="text-slate-300">เมื่อเงื่อนไขเป็น <strong class="text-white">เท็จ</strong></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Slide 4: == -->
+                    <div class="k-slide hidden flex-col items-center text-center animate-fadeIn w-full">
+                        <div class="bg-blue-500/20 text-blue-400 text-6xl font-bold font-mono py-4 px-8 rounded-2xl border border-blue-500/50 mb-6">==</div>
+                        <h2 class="text-3xl font-bold mb-4">เท่ากับ (Equal)</h2>
+                        <p class="text-xl text-slate-300 mb-6">ตรวจสอบว่าข้อมูลทั้งสองฝั่งมีค่า <strong class="text-emerald-400">เท่ากัน</strong> หรือไม่</p>
+                        <div class="bg-slate-800 p-4 rounded-lg font-mono text-lg text-left inline-block">
+                            <p><span class="text-orange-300">10</span> <span class="text-blue-400">==</span> <span class="text-orange-300">10</span> <span class="text-slate-500"># <span class="text-emerald-400">True</span></span></p>
+                            <p class="mt-2"><span class="text-orange-300">5</span> <span class="text-blue-400">==</span> <span class="text-orange-300">8</span> <span class="text-slate-500 pl-2"># <span class="text-red-400">False</span></span></p>
+                        </div>
+                    </div>
+
+                    <!-- Slide 5: != -->
+                    <div class="k-slide hidden flex-col items-center text-center animate-fadeIn w-full">
+                        <div class="bg-purple-500/20 text-purple-400 text-6xl font-bold font-mono py-4 px-8 rounded-2xl border border-purple-500/50 mb-6">!=</div>
+                        <h2 class="text-3xl font-bold mb-4">ไม่เท่ากับ (Not Equal)</h2>
+                        <p class="text-xl text-slate-300 mb-6">ตรวจสอบว่าข้อมูลทั้งสองฝั่งมีค่า <strong class="text-red-400">ต่างกัน</strong> หรือไม่</p>
+                        <div class="bg-slate-800 p-4 rounded-lg font-mono text-lg text-left inline-block">
+                            <p><span class="text-orange-300">10</span> <span class="text-purple-400">!=</span> <span class="text-orange-300">5</span> <span class="text-slate-500 pl-2"># <span class="text-emerald-400">True</span> (ต่างกันจริงๆ)</span></p>
+                            <p class="mt-2"><span class="text-orange-300">7</span> <span class="text-purple-400">!=</span> <span class="text-orange-300">7</span> <span class="text-slate-500 pl-2"># <span class="text-red-400">False</span> (มันเท่ากัน)</span></p>
+                        </div>
+                    </div>
+
+                    <!-- Slide 6: > and < -->
+                    <div class="k-slide hidden flex-col items-center text-center animate-fadeIn w-full">
+                        <div class="flex gap-6 mb-6">
+                            <div class="bg-yellow-500/20 text-yellow-400 text-6xl font-bold font-mono py-4 px-6 rounded-2xl border border-yellow-500/50">&gt;</div>
+                            <div class="bg-yellow-500/20 text-yellow-400 text-6xl font-bold font-mono py-4 px-6 rounded-2xl border border-yellow-500/50">&lt;</div>
+                        </div>
+                        <h2 class="text-3xl font-bold mb-4">มากกว่า / น้อยกว่า</h2>
+                        <p class="text-xl text-slate-300 mb-6">เปรียบเทียบปริมาณเชิงคณิตศาสตร์</p>
+                        <div class="bg-slate-800 p-4 rounded-lg font-mono text-lg text-left inline-block">
+                            <p><span class="text-orange-300">100</span> <span class="text-yellow-400">&gt;</span> <span class="text-orange-300">50</span> <span class="text-slate-500 pl-2"># <span class="text-emerald-400">True</span> (100 มากกว่า)</span></p>
+                            <p class="mt-2"><span class="text-orange-300">20</span> <span class="text-yellow-400">&lt;</span> <span class="text-orange-300">20</span> <span class="text-slate-500 pl-4"># <span class="text-red-400">False</span> (มันเท่ากัน ไม่ได้น้อยกว่า)</span></p>
+                        </div>
+                    </div>
+
+                    <!-- Slide 7: >= and <= -->
+                    <div class="k-slide hidden flex-col items-center text-center animate-fadeIn w-full">
+                        <div class="flex gap-6 mb-6">
+                            <div class="bg-pink-500/20 text-pink-400 text-5xl font-bold font-mono py-4 px-6 rounded-2xl border border-pink-500/50">&gt;=</div>
+                            <div class="bg-pink-500/20 text-pink-400 text-5xl font-bold font-mono py-4 px-6 rounded-2xl border border-pink-500/50">&lt;=</div>
+                        </div>
+                        <h2 class="text-3xl font-bold mb-4">มากกว่าหรือเท่ากับ / น้อยกว่าหรือเท่ากับ</h2>
+                        <p class="text-xl text-slate-300 mb-6">รวมกรณีที่ตัวเลข <strong class="text-emerald-400">เท่ากัน</strong> เข้าไปด้วย</p>
+                        <div class="bg-slate-800 p-4 rounded-lg font-mono text-lg text-left inline-block">
+                            <p><span class="text-orange-300">18</span> <span class="text-pink-400">&gt;=</span> <span class="text-orange-300">18</span> <span class="text-slate-500 pl-2"># <span class="text-emerald-400">True</span> (อายุ 18 พอดีถือว่าผ่าน)</span></p>
+                            <p class="mt-2"><span class="text-orange-300">0</span> <span class="text-pink-400">&lt;=</span> <span class="text-orange-300">5</span> <span class="text-slate-500 pl-4"># <span class="text-emerald-400">True</span> (0 น้อยกว่า 5)</span></p>
+                        </div>
+                    </div>
+
+                    <!-- Slide 8: Warning = vs == -->
+                    <div class="k-slide hidden flex-col items-center text-center animate-fadeIn w-full">
+                        <div class="bg-red-500/20 text-red-400 text-6xl py-4 px-6 rounded-2xl border border-red-500/50 mb-6 animate-pulse">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                        </div>
+                        <h2 class="text-3xl font-bold mb-4 text-red-400">จุดระวัง! = ไม่เหมือน ==</h2>
+                        <div class="grid md:grid-cols-2 gap-4 w-full max-w-2xl text-left">
+                            <div class="bg-slate-800 p-5 rounded-lg border-l-4 border-slate-500">
+                                <h3 class="text-lg font-bold mb-2"><code>=</code> (ตัวเดียว)</h3>
+                                <p class="text-sm text-slate-400 mb-2">ใช้ <strong>กำหนดค่า</strong> ให้ตัวแปร</p>
+                                <code class="text-blue-300 bg-slate-900 px-2 py-1 rounded">score = 100</code>
+                            </div>
+                            <div class="bg-slate-800 p-5 rounded-lg border-l-4 border-blue-500">
+                                <h3 class="text-lg font-bold mb-2"><code>==</code> (สองตัว)</h3>
+                                <p class="text-sm text-slate-400 mb-2">ใช้ <strong>เปรียบเทียบ</strong> ค่า</p>
+                                <code class="text-emerald-300 bg-slate-900 px-2 py-1 rounded">score == 100</code>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Slide 9: Math + Logic -->
+                    <div class="k-slide hidden flex-col items-center text-center animate-fadeIn w-full">
+                        <i class="fa-solid fa-calculator text-5xl text-orange-400 mb-6"></i>
+                        <h2 class="text-3xl font-bold mb-4">คณิตศาสตร์ & การเปรียบเทียบ</h2>
+                        <p class="text-xl text-slate-300 mb-6">คอมพิวเตอร์จะคำนวณตัวเลขให้เสร็จก่อน แล้วจึงนำผลลัพธ์มาเปรียบเทียบ</p>
+                        <div class="bg-slate-800 p-5 rounded-lg font-mono text-lg text-left inline-block border border-slate-600">
+                            <p class="mb-2"><span class="text-slate-500"># (5 คูณ 2) เท่ากับ 10 หรือไม่?</span></p>
+                            <p>(<span class="text-orange-300">5</span> * <span class="text-orange-300">2</span>) <span class="text-blue-400">==</span> <span class="text-orange-300">10</span> <span class="text-slate-500 pl-4">-> <span class="text-emerald-400">True</span></span></p>
+                            <hr class="border-slate-700 my-3">
+                            <p class="mb-2"><span class="text-slate-500"># (10 หาร 2) มากกว่า 3 หรือไม่?</span></p>
+                            <p>(<span class="text-orange-300">10</span> / <span class="text-orange-300">2</span>) <span class="text-yellow-400">&gt;</span> <span class="text-orange-300">3</span> <span class="text-slate-500 pl-6">-> <span class="text-emerald-400">True</span></span></p>
+                        </div>
+                    </div>
+
+                    <!-- Slide 10: Ready -->
+                    <div class="k-slide hidden flex-col items-center text-center animate-fadeIn w-full">
+                        <i class="fa-solid fa-rocket text-6xl text-blue-500 mb-6 animate-bounce"></i>
+                        <h2 class="text-4xl font-bold mb-4">เรียนรู้ทฤษฎีครบแล้ว!</h2>
+                        <p class="text-xl text-slate-300 mb-8 max-w-lg mx-auto">ถึงเวลานำความรู้เรื่อง ตัวดำเนินการเปรียบเทียบ ไปใช้ปกป้องป้อมปราการในมินิเกมของเราแล้ว</p>
+                        <button onclick="switchTab('game')" class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-10 py-4 rounded-full font-bold text-xl shadow-xl shadow-blue-500/30 transition-transform transform hover:scale-105">
+                            เข้าสู่โหมดมินิเกม <i class="fa-solid fa-gamepad ml-2"></i>
+                        </button>
+                    </div>
+
+                </div>
+
+                <!-- Slider Controls -->
+                <div class="bg-slate-800 p-4 border-t border-slate-700 flex justify-between items-center mt-auto">
+                    <button id="btn-prev-kslide" onclick="prevKSlide()" class="px-5 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="fa-solid fa-angle-left mr-2"></i> ก่อนหน้า
+                    </button>
+                    
+                    <div class="flex items-center gap-3">
+                        <span class="text-slate-400 font-medium tracking-wide">สไลด์ <span id="k-slide-num" class="text-white font-bold text-lg">1</span> / 10</span>
+                    </div>
+
+                    <button id="btn-next-kslide" onclick="nextKSlide()" class="px-5 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white font-medium transition-colors">
+                        ถัดไป <i class="fa-solid fa-angle-right ml-2"></i>
+                    </button>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- SECTION 2: TOWER DEFENSE GAME -->
+        <section id="game" class="section-content">
+            <div class="text-center mb-6">
+                <h1 class="text-3xl md:text-4xl font-bold mb-2">🏰 เกมป้องกันป้อมชายหาด <span class="text-blue-400">Comparison TD</span></h1>
+                <p class="text-slate-400">ศัตรูถือป้ายเงื่อนไขบุกเข้าหาป้อม! กดตัดสินใจว่า <span class="text-emerald-400 font-bold">True</span> หรือ <span class="text-red-400 font-bold">False</span> เพื่อสั่งป้อมยิงสกัด (คลิกเปลี่ยนเป้าหมายได้)</p>
+            </div>
+
+            <div class="max-w-4xl mx-auto glass-panel p-6 rounded-2xl shadow-xl">
+                <!-- Game Dashboard -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 items-center mb-4 bg-slate-800 p-4 rounded-xl">
+                    <div>
+                        <span class="text-slate-400 text-xs block">คะแนนสะสม</span>
+                        <span id="game-score" class="text-2xl md:text-3xl font-bold text-yellow-400">0</span>
+                        <span id="combo-badge" class="hidden ml-2 text-xs bg-orange-500/20 text-orange-400 border border-orange-500/40 px-2 py-0.5 rounded-full font-bold">Combo x2</span>
+                    </div>
+
+                    <div>
+                        <span class="text-slate-400 text-xs block">เวฟ (Wave) / เวลา</span>
+                        <div class="flex items-baseline gap-2">
+                            <span class="text-lg font-bold text-purple-400">Wave <span id="game-wave">1</span></span>
+                            <span class="text-slate-500">|</span>
+                            <span class="text-2xl font-bold text-blue-400"><span id="game-time">60</span><small class="text-xs text-slate-400 ml-0.5">s</small></span>
+                        </div>
+                    </div>
+                    
+                    <div class="col-span-2">
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="text-slate-300 font-bold"><i class="fa-solid fa-shield-halved text-blue-400 mr-1"></i> HP ป้อมปราการ</span>
+                            <span id="hp-text" class="text-emerald-400 font-bold">100/100</span>
+                        </div>
+                        <div class="w-full bg-slate-900 h-4 rounded-full border border-slate-700 overflow-hidden">
+                            <div id="hp-fill" class="bg-gradient-to-r from-emerald-500 to-emerald-400 h-full w-full transition-all duration-300"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Current Target Question Display -->
+                <div id="game-status" class="text-center font-mono text-lg md:text-2xl font-bold text-white px-4 py-3 bg-slate-900/80 rounded-xl mb-4 border border-yellow-500/40 shadow-inner flex flex-wrap items-center justify-center gap-2">
+                    <span>กดปุ่ม "เริ่มภารกิจป้องกันป้อม" เพื่อเริ่มเกม</span>
+                </div>
+
+                <!-- Game Canvas/Container -->
+                <div id="game-container">
+                    <!-- Defense Perimeter Line -->
+                    <div id="defense-line" title="แนวป้องกันป้อม"></div>
+
+                    <!-- Fortress Tower on Left -->
+                    <div id="tower-base">
+                        <div class="tower-battlements">
+                            <div class="tower-merlon"></div>
+                            <div class="tower-merlon"></div>
+                            <div class="tower-merlon"></div>
+                        </div>
+                        <div id="turret-dome"></div>
+                        <div id="cannon-barrel"></div>
+                        <!-- Fortress Emblem & Windows -->
+                        <div class="mt-6 flex flex-col items-center gap-2">
+                            <i class="fa-brands fa-python text-blue-400 text-2xl drop-shadow"></i>
+                            <div class="flex gap-3">
+                                <div class="w-3 h-5 bg-slate-900 rounded-t-full border border-slate-600"></div>
+                                <div class="w-3 h-5 bg-slate-900 rounded-t-full border border-slate-600"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Overlays -->
+                    <div id="start-overlay" class="absolute inset-0 bg-slate-900/75 backdrop-blur-xs flex flex-col justify-center items-center z-30 p-6 text-center">
+                        <div class="bg-slate-800/90 border border-slate-600 p-6 rounded-2xl max-w-md shadow-2xl">
+                            <i class="fa-solid fa-chess-rook text-5xl text-blue-400 mb-3"></i>
+                            <h3 class="text-2xl font-bold text-white mb-2">ปกป้องป้อมชายหาด!</h3>
+                            <p class="text-slate-300 text-sm mb-5 leading-relaxed">
+                                กองทัพศัตรูจะถือป้ายโจทย์เปรียบเทียบ Python บุกมาจากทางขวา<br>
+                                กดเลือก <strong class="text-emerald-400">True (จริง)</strong> หรือ <strong class="text-red-400">False (เท็จ)</strong> ให้ตรงกับป้ายของศัตรูที่ล็อกเป้าอยู่เพื่อสั่งป้อมปืนใหญ่ยิงทำลาย!
+                            </p>
+                            <button onclick="startGame()" class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-8 py-3.5 rounded-full font-bold text-xl shadow-xl shadow-blue-500/40 transition-transform transform hover:scale-105 cursor-pointer">
+                                <i class="fa-solid fa-play mr-2"></i> เริ่มภารกิจป้องกันป้อม
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="game-over-overlay" class="absolute inset-0 bg-slate-900/90 flex flex-col justify-center items-center z-30 hidden p-6 text-center">
+                        <h2 id="game-over-title" class="text-4xl font-bold text-white mb-2">จบภารกิจ!</h2>
+                        <p id="game-over-sub" class="text-slate-400 mb-4">คุณป้องกันป้อมจนถึง Wave ที่ <span id="final-game-wave" class="text-purple-400 font-bold">1</span></p>
+                        <p class="text-xl text-slate-300 mb-6">คะแนนรวม: <span id="final-game-score" class="text-yellow-400 font-bold text-4xl">0</span> คะแนน</p>
+                        <div class="flex flex-wrap gap-4 justify-center">
+                            <button onclick="startGame()" class="bg-blue-500 hover:bg-blue-600 text-white px-7 py-2.5 rounded-full font-bold shadow-lg cursor-pointer">
+                                <i class="fa-solid fa-rotate-right mr-2"></i> เล่นอีกครั้ง
+                            </button>
+                            <button onclick="switchTab('quiz')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-7 py-2.5 rounded-full font-bold shadow-lg cursor-pointer">
+                                ไปทำแบบทดสอบหลังเรียน <i class="fa-solid fa-arrow-right ml-1"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Player Answer Controls (True / False) -->
+                <div class="mt-4 grid grid-cols-2 gap-4">
+                    <button id="btn-ans-true" onclick="submitDefenseAnswer(true)" disabled class="group bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 disabled:opacity-40 disabled:cursor-not-allowed text-white py-4 px-6 rounded-xl font-bold text-xl md:text-2xl shadow-lg shadow-emerald-900/40 border-b-4 border-emerald-800 active:translate-y-0.5 transition-all flex items-center justify-center gap-3 cursor-pointer">
+                        <i class="fa-solid fa-circle-check text-2xl md:text-3xl group-hover:scale-110 transition-transform"></i>
+                        <div class="text-left">
+                            <span class="block leading-none">True (จริง)</span>
+                            <span class="text-xs font-normal text-emerald-100 opacity-80">กดปุ่มลูกศรซ้าย ⬅️ หรือปุ่ม T</span>
+                        </div>
+                    </button>
+
+                    <button id="btn-ans-false" onclick="submitDefenseAnswer(false)" disabled class="group bg-gradient-to-r from-red-600 to-rose-500 hover:from-red-500 hover:to-rose-400 disabled:opacity-40 disabled:cursor-not-allowed text-white py-4 px-6 rounded-xl font-bold text-xl md:text-2xl shadow-lg shadow-red-900/40 border-b-4 border-red-800 active:translate-y-0.5 transition-all flex items-center justify-center gap-3 cursor-pointer">
+                        <i class="fa-solid fa-circle-xmark text-2xl md:text-3xl group-hover:scale-110 transition-transform"></i>
+                        <div class="text-left">
+                            <span class="block leading-none">False (เท็จ)</span>
+                            <span class="text-xs font-normal text-red-100 opacity-80">กดปุ่มลูกศรขวา ➡️ หรือปุ่ม F</span>
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: QUIZ -->
+        <section id="quiz" class="section-content">
+            <div class="text-center mb-8">
+                <h1 class="text-3xl md:text-4xl font-bold mb-2"><i class="fa-solid fa-file-signature text-blue-400 mr-2"></i>แบบทดสอบหลังเรียน</h1>
+                <p class="text-slate-400">ประลองความรู้สายเกมเมอร์ 5 ข้อ</p>
+            </div>
+
+            <!-- Pre-Quiz Form -->
+            <div id="quiz-register" class="max-w-md mx-auto glass-panel p-8 rounded-2xl shadow-xl text-center">
+                <i class="fa-solid fa-user-astronaut text-5xl text-blue-400 mb-4"></i>
+                <h2 class="text-2xl font-bold mb-6">ลงชื่อผู้ทำภารกิจ</h2>
+                <input type="text" id="student-name" placeholder="พิมพ์ชื่อ-นามสกุล หรือ ฉายา..." class="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-400 mb-6 text-center text-lg">
+                <button onclick="startQuiz()" class="w-full bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-bold text-lg shadow-lg transition-transform transform hover:scale-105">
+                    เริ่มทำข้อสอบ
+                </button>
+            </div>
+
+            <!-- Quiz Questions Container -->
+            <div id="quiz-container" class="max-w-3xl mx-auto hidden">
+                <div class="glass-panel p-6 rounded-2xl shadow-xl mb-6 flex justify-between items-center">
+                    <span class="text-lg">ผู้ทดสอบ: <strong id="display-name" class="text-blue-400"></strong></span>
+                    <span class="bg-slate-800 px-4 py-2 rounded-lg text-sm">ข้อที่ <span id="current-q-num" class="text-blue-400 font-bold">1</span>/5</span>
+                </div>
+
+                <form id="quiz-form" onsubmit="nextQuizQuestion(event)">
+                    <!-- Progress Bar -->
+                    <div class="w-full bg-slate-800 h-2 rounded-full mb-6">
+                        <div id="quiz-progress" class="bg-blue-500 h-full rounded-full transition-all duration-300" style="width: 20%"></div>
+                    </div>
+
+                    <!-- Single Question Injector -->
+                    <div id="single-question-wrapper" class="space-y-6 min-h-[250px]">
+                        <!-- Injected via JS -->
+                    </div>
+                    
+                    <div class="mt-8 flex justify-between items-center">
+                        <button type="button" id="prev-btn" onclick="prevQuizQuestion()" class="text-slate-400 hover:text-white px-4 py-2 hidden">
+                            <i class="fa-solid fa-angle-left mr-1"></i> ย้อนกลับ
+                        </button>
+                        <button type="submit" id="next-btn" class="ml-auto bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-8 py-3 rounded-full font-bold text-lg shadow-lg shadow-blue-500/30 transition-transform transform hover:scale-105">
+                            ข้อถัดไป <i class="fa-solid fa-angle-right ml-2"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Quiz Results -->
+            <div id="quiz-result" class="max-w-3xl mx-auto hidden">
+                <div class="glass-panel p-8 rounded-2xl shadow-xl text-center">
+                    <div class="inline-block p-4 rounded-full bg-slate-800 mb-4">
+                        <i id="result-icon" class="fa-solid fa-trophy text-5xl text-yellow-400"></i>
+                    </div>
+                    <h2 class="text-3xl font-bold mb-2">สรุปผลภารกิจ</h2>
+                    <p class="text-xl text-slate-300 mb-6">คุณ <span id="result-name" class="text-blue-400 font-bold"></span></p>
+                    
+                    <div class="flex justify-center items-end space-x-2 mb-8 animate-pop">
+                        <span id="result-score" class="text-6xl font-bold text-emerald-400">0</span>
+                        <span class="text-3xl text-slate-500 mb-1">/ 5</span>
+                    </div>
+
+                    <div id="answer-key" class="text-left space-y-4 bg-slate-900 p-6 rounded-xl border border-slate-700">
+                        <h3 class="font-bold text-lg text-white border-b border-slate-700 pb-2 mb-4">เฉลยและคำอธิบาย</h3>
+                        <!-- Keys injected here -->
+                    </div>
+                    
+                    <button onclick="resetQuiz()" class="mt-8 bg-slate-700 hover:bg-slate-600 text-white px-6 py-2 rounded-full font-medium transition-colors">
+                        <i class="fa-solid fa-rotate-right mr-2"></i> เริ่มใหม่
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Custom Modal for Alerts -->
+    <div id="custom-modal" class="fixed inset-0 bg-black/80 flex justify-center items-center z-[100] hidden backdrop-blur-sm">
+        <div class="bg-slate-800 border border-slate-600 p-6 rounded-2xl shadow-2xl max-w-sm w-full text-center animate-pop">
+            <i class="fa-solid fa-circle-exclamation text-yellow-400 text-5xl mb-4"></i>
+            <h3 id="modal-title" class="text-xl font-bold mb-2">แจ้งเตือน</h3>
+            <p id="modal-message" class="text-slate-300 mb-6">ข้อความ</p>
+            <button onclick="closeModal()" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-bold w-full">
+                ตกลง
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- Navigation Logic ---
+        function switchTab(tabId) {
+            if (tabId !== 'game' && typeof isGameRunning !== 'undefined' && isGameRunning) {
+                stopGameCleanly();
+            }
+            document.querySelectorAll('.section-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(el => {
+                el.classList.remove('text-blue-400', 'bg-blue-400/10');
+                el.classList.add('text-gray-300');
+            });
+            
+            document.getElementById(tabId).classList.add('active');
+            const activeBtn = document.getElementById('nav-' + tabId);
+            activeBtn.classList.remove('text-gray-300');
+            activeBtn.classList.add('text-blue-400', 'bg-blue-400/10');
+        }
+
+        // --- Custom Modal ---
+        function showModal(title, message) {
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-message').innerText = message;
+            document.getElementById('custom-modal').classList.remove('hidden');
+        }
+        function closeModal() {
+            document.getElementById('custom-modal').classList.add('hidden');
+        }
+
+        // --- KNOWLEDGE SLIDER LOGIC ---
+        let currentKSlide = 0;
+        const totalKSlides = 10;
+
+        function showKSlide(index) {
+            const slides = document.querySelectorAll('.k-slide');
+            if (index < 0) index = 0;
+            if (index >= totalKSlides) index = totalKSlides - 1;
+            
+            currentKSlide = index;
+            
+            slides.forEach((slide, i) => {
+                if (i === currentKSlide) {
+                    slide.classList.remove('hidden');
+                    slide.classList.add('flex'); // Need flex for vertical centering
+                } else {
+                    slide.classList.add('hidden');
+                    slide.classList.remove('flex');
+                }
+            });
+            
+            document.getElementById('k-slide-num').innerText = currentKSlide + 1;
+            
+            // Update Buttons State
+            const prevBtn = document.getElementById('btn-prev-kslide');
+            const nextBtn = document.getElementById('btn-next-kslide');
+            
+            if (currentKSlide === 0) {
+                prevBtn.disabled = true;
+            } else {
+                prevBtn.disabled = false;
+            }
+            
+            if (currentKSlide === totalKSlides - 1) {
+                nextBtn.classList.add('invisible'); // Hide visually but keep spacing
+            } else {
+                nextBtn.classList.remove('invisible');
+            }
+        }
+
+        function nextKSlide() {
+            showKSlide(currentKSlide + 1);
+        }
+
+        function prevKSlide() {
+            showKSlide(currentKSlide - 1);
+        }
+
+        // Init Slider
+        document.addEventListener('DOMContentLoaded', () => {
+            showKSlide(0);
+        });
+
+        // --- GAME LOGIC (TOWER DEFENSE) ---
+        const gameQuestions = [
+            { q: "10 % 3 == 1", ans: true },
+            { q: "5 ** 2 < 20", ans: false },
+            { q: "(10 + 5) * 2 >= 30", ans: true },
+            { q: "15 != (20 - 5)", ans: false },
+            { q: "100 / 2 <= 40", ans: false },
+            { q: "8 < (2 ** 3)", ans: false },
+            { q: "100 >= 100", ans: true },
+            { q: "50 == (25 * 2)", ans: true },
+            { q: "7 * 3 > 20", ans: true },
+            { q: "12 // 5 == 3", ans: false },
+            { q: "9 % 2 != 0", ans: true },
+            { q: "(4 + 6) <= 9", ans: false },
+            { q: "3 ** 2 == 9", ans: true },
+            { q: "20 - 8 < 10", ans: false },
+            { q: "16 / 4 >= 4", ans: true },
+            { q: "25 % 5 != 0", ans: false }
+        ];
+
+        const enemyTypes = [
+            { name: 'Sky Drone', icon: 'fa-helicopter', laneY: [85, 145], color: 'from-sky-500 to-blue-700', speedMult: 1.15 },
+            { name: 'Pirate Ship', icon: 'fa-ship', laneY: [220, 290], color: 'from-amber-500 to-red-700', speedMult: 0.95 },
+            { name: 'Crab Bot', icon: 'fa-robot', laneY: [355, 410], color: 'from-purple-500 to-indigo-800', speedMult: 1.0 }
+        ];
+
+        let gameScore = 0;
+        let gameTime = 60;
+        let towerHP = 100;
+        let currentWave = 1;
+        let defeatedCount = 0;
+        let comboCount = 0;
+        let gameInterval;
+        let spawnTimer = 0;
+        let isGameRunning = false;
+        let animationFrameId;
+        let enemyIdCounter = 1;
+        let selectedEnemyId = null;
+
+        // Game Entities
+        let enemies = [];
+        let playerBullets = [];
+        let enemyBullets = [];
+
+        const container = document.getElementById('game-container');
+        const statusEl = document.getElementById('game-status');
+        const scoreEl = document.getElementById('game-score');
+        const timeEl = document.getElementById('game-time');
+        const waveEl = document.getElementById('game-wave');
+        const comboBadge = document.getElementById('combo-badge');
+        const hpFill = document.getElementById('hp-fill');
+        const hpText = document.getElementById('hp-text');
+        const cannonBarrel = document.getElementById('cannon-barrel');
+        const towerBase = document.getElementById('tower-base');
+        const btnTrue = document.getElementById('btn-ans-true');
+        const btnFalse = document.getElementById('btn-ans-false');
+
+        // Tower muzzle origin relative to container
+        function getTowerOrigin() {
+            return {
+                x: 86,
+                y: container.clientHeight - 98
+            };
+        }
+
+        function startGame() {
+            document.getElementById('start-overlay').classList.add('hidden');
+            document.getElementById('game-over-overlay').classList.add('hidden');
+            
+            // Reset Stats
+            gameScore = 0;
+            gameTime = 60;
+            towerHP = 100;
+            currentWave = 1;
+            defeatedCount = 0;
+            comboCount = 0;
+            spawnTimer = 0;
+            selectedEnemyId = null;
+
+            scoreEl.innerText = gameScore;
+            timeEl.innerText = gameTime;
+            waveEl.innerText = currentWave;
+            updateComboUI();
+            updateHPUI();
+            
+            clearEntities();
+            isGameRunning = true;
+            btnTrue.disabled = false;
+            btnFalse.disabled = false;
+            
+            // Spawn initial wave enemies
+            spawnEnemy();
+            setTimeout(() => { if (isGameRunning) spawnEnemy(); }, 1200);
+
+            clearInterval(gameInterval);
+            gameInterval = setInterval(gameTick, 1000);
+            cancelAnimationFrame(animationFrameId);
+            gameLoop();
+        }
+
+        function stopGameCleanly() {
+            isGameRunning = false;
+            clearInterval(gameInterval);
+            cancelAnimationFrame(animationFrameId);
+            clearEntities();
+            btnTrue.disabled = true;
+            btnFalse.disabled = true;
+            document.getElementById('start-overlay').classList.remove('hidden');
+            statusEl.innerHTML = `<span>กดปุ่ม "เริ่มภารกิจป้องกันป้อม" เพื่อเริ่มเกม</span>`;
+        }
+
+        function gameTick() {
+            if (!isGameRunning) return;
+            gameTime--;
+            timeEl.innerText = gameTime;
+            spawnTimer++;
+
+            // Spawn rate scales with wave
+            const maxEnemiesOnScreen = Math.min(5, 2 + currentWave);
+            const spawnIntervalSec = Math.max(2, 4 - Math.floor(currentWave / 2));
+
+            if (enemies.length === 0 || (enemies.length < maxEnemiesOnScreen && spawnTimer >= spawnIntervalSec)) {
+                spawnEnemy();
+                spawnTimer = 0;
+            }
+
+            if (gameTime <= 0) {
+                endGame("🎉 ป้องกันป้อมสำเร็จ! หมดเวลา!");
+            }
+        }
+
+        function updateHPUI() {
+            const clampedHP = Math.max(0, towerHP);
+            hpFill.style.width = clampedHP + '%';
+            hpText.innerText = clampedHP + '/100';
+            if (clampedHP <= 30) {
+                hpFill.className = "bg-gradient-to-r from-red-600 to-red-500 h-full transition-all duration-300";
+                hpText.className = "text-red-400 font-bold";
+            } else if (clampedHP <= 60) {
+                hpFill.className = "bg-gradient-to-r from-yellow-500 to-yellow-400 h-full transition-all duration-300";
+                hpText.className = "text-yellow-400 font-bold";
+            } else {
+                hpFill.className = "bg-gradient-to-r from-emerald-500 to-emerald-400 h-full transition-all duration-300";
+                hpText.className = "text-emerald-400 font-bold";
+            }
+        }
+
+        function updateComboUI() {
+            if (comboCount >= 2) {
+                comboBadge.innerText = `🔥 Combo x${comboCount}`;
+                comboBadge.classList.remove('hidden');
+            } else {
+                comboBadge.classList.add('hidden');
+            }
+        }
+
+        function spawnFloatingText(x, y, text, colorClass) {
+            const el = document.createElement('div');
+            el.className = `floating-text ${colorClass}`;
+            el.style.left = x + 'px';
+            el.style.top = y + 'px';
+            el.innerText = text;
+            container.appendChild(el);
+            setTimeout(() => el.remove(), 900);
+        }
+
+        function shakeTower() {
+            towerBase.classList.remove('animate-shake');
+            void towerBase.offsetWidth;
+            towerBase.classList.add('animate-shake');
+        }
+
+        function endGame(titleStr) {
+            isGameRunning = false;
+            clearInterval(gameInterval);
+            cancelAnimationFrame(animationFrameId);
+            btnTrue.disabled = true;
+            btnFalse.disabled = true;
+            
+            document.getElementById('game-over-title').innerText = titleStr;
+            document.getElementById('final-game-wave').innerText = currentWave;
+            document.getElementById('final-game-score').innerText = gameScore;
+            document.getElementById('game-over-overlay').classList.remove('hidden');
+        }
+
+        function spawnEnemy() {
+            if (!isGameRunning) return;
+
+            // Pick a question not currently displayed if possible
+            const activeQs = enemies.map(e => e.question.q);
+            const availableQs = gameQuestions.filter(item => !activeQs.includes(item.q));
+            const pool = availableQs.length > 0 ? availableQs : gameQuestions;
+            const qObj = pool[Math.floor(Math.random() * pool.length)];
+
+            const type = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
+            const id = enemyIdCounter++;
+
+            const startX = (container.clientWidth || 800) + 55;
+            const minY = type.laneY[0];
+            const maxY = type.laneY[1];
+            const startY = minY + Math.random() * (maxY - minY);
+
+            // Base speed scales gently with wave
+            const baseSpeed = (0.45 + (currentWave - 1) * 0.08) * type.speedMult;
+
+            const el = document.createElement('div');
+            el.className = 'td-enemy';
+            el.style.left = startX + 'px';
+            el.style.top = startY + 'px';
+            el.innerHTML = `
+                <div class="td-enemy-sign">
+                    <span class="td-enemy-badge">🎯 เป้าหมาย</span>
+                    <span>${qObj.q}</span>
+                </div>
+                <div class="td-enemy-body bg-gradient-to-br ${type.color}">
+                    <i class="fa-solid ${type.icon}"></i>
+                </div>
+            `;
+
+            // Allow clicking an enemy to manually lock onto it
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (!isGameRunning) return;
+                selectedEnemyId = id;
+                updateTargetSelection();
+            });
+
+            container.appendChild(el);
+            enemies.push({
+                id,
+                el,
+                x: startX,
+                y: startY,
+                vx: -baseSpeed,
+                question: qObj,
+                type,
+                lockedForDestroy: false
+            });
+
+            updateTargetSelection();
+        }
+
+        function getActiveTargetEnemy() {
+            const validEnemies = enemies.filter(e => !e.lockedForDestroy);
+            if (validEnemies.length === 0) return null;
+
+            // If user manually selected a valid enemy, keep it
+            if (selectedEnemyId !== null) {
+                const found = validEnemies.find(e => e.id === selectedEnemyId);
+                if (found) return found;
+            }
+
+            // Otherwise auto-target the closest enemy to the fortress (lowest x)
+            validEnemies.sort((a, b) => a.x - b.x);
+            selectedEnemyId = validEnemies[0].id;
+            return validEnemies[0];
+        }
+
+        function updateTargetSelection() {
+            const target = getActiveTargetEnemy();
+            enemies.forEach(e => {
+                if (target && e.id === target.id) {
+                    e.el.classList.add('targeted');
+                } else {
+                    e.el.classList.remove('targeted');
+                }
+            });
+
+            if (target) {
+                statusEl.innerHTML = `
+                    <span class="text-xs uppercase tracking-wider bg-yellow-500/20 text-yellow-300 border border-yellow-500/40 px-2.5 py-1 rounded-full">🎯 เป้าหมายล็อก</span>
+                    <span class="text-yellow-300 text-xl md:text-2xl tracking-wide">${target.question.q}</span>
+                `;
+                aimTurretAt(target.x, target.y);
+            } else {
+                statusEl.innerHTML = `<span class="text-slate-400">กำลังสแกนหาศัตรูระลอกถัดไป...</span>`;
+            }
+        }
+
+        function aimTurretAt(targetX, targetY) {
+            const origin = getTowerOrigin();
+            const angleDeg = Math.atan2(targetY - origin.y, targetX - origin.x) * 180 / Math.PI;
+            const clampedAngle = Math.max(-65, Math.min(45, angleDeg));
+            cannonBarrel.style.transform = `rotate(${clampedAngle}deg)`;
+        }
+
+        function submitDefenseAnswer(userChoice) {
+            if (!isGameRunning) return;
+            const target = getActiveTargetEnemy();
+            if (!target) return;
+
+            aimTurretAt(target.x, target.y);
+
+            if (userChoice === target.question.ans) {
+                // Correct Answer -> Lock target & fire cannonball to destroy it
+                target.lockedForDestroy = true;
+                selectedEnemyId = null;
+                firePlayerProjectile(target);
+                updateTargetSelection();
+            } else {
+                // Wrong Answer -> Reset combo & enemy counter-attacks fortress
+                comboCount = 0;
+                updateComboUI();
+                gameScore = Math.max(0, gameScore - 5);
+                scoreEl.innerText = gameScore;
+
+                spawnFloatingText(target.x, target.y - 30, "ตอบผิด! ศัตรูยิงสวน!", "text-red-400");
+                spawnEnemyCounterBullet(target.x, target.y);
+            }
+        }
+
+        function firePlayerProjectile(targetEnemy) {
+            const origin = getTowerOrigin();
+            const el = document.createElement('div');
+            el.className = 'player-bullet';
+            el.style.left = origin.x + 'px';
+            el.style.top = origin.y + 'px';
+            container.appendChild(el);
+
+            playerBullets.push({
+                el,
+                x: origin.x,
+                y: origin.y,
+                target: targetEnemy,
+                speed: 15
+            });
+        }
+
+        function spawnEnemyCounterBullet(startX, startY) {
+            const origin = getTowerOrigin();
+            const el = document.createElement('div');
+            el.className = 'enemy-bullet';
+            el.style.left = startX + 'px';
+            el.style.top = startY + 'px';
+            container.appendChild(el);
+
+            const angle = Math.atan2(origin.y - startY, origin.x - startX);
+            const speed = 10;
+
+            enemyBullets.push({
+                el,
+                x: startX,
+                y: startY,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed
+            });
+        }
+
+        function damageTower(amount, reasonText) {
+            towerHP -= amount;
+            updateHPUI();
+            shakeTower();
+            const origin = getTowerOrigin();
+            spawnFloatingText(origin.x + 10, origin.y - 30, `-${amount} HP (${reasonText})`, "text-red-400");
+
+            if (towerHP <= 0) {
+                endGame("💥 ป้อมปราการถูกทำลาย!");
+            }
+        }
+
+        // Keyboard shortcuts for True (ArrowLeft / KeyT) and False (ArrowRight / KeyF)
+        document.addEventListener('keydown', (e) => {
+            if (!isGameRunning) return;
+            if (e.key === 'ArrowLeft' || e.key === 't' || e.key === 'T') {
+                e.preventDefault();
+                submitDefenseAnswer(true);
+            } else if (e.key === 'ArrowRight' || e.key === 'f' || e.key === 'F') {
+                e.preventDefault();
+                submitDefenseAnswer(false);
+            }
+        });
+
+        function gameLoop() {
+            if (!isGameRunning) return;
+
+            // 1. Update Homing Player Bullets
+            for (let i = playerBullets.length - 1; i >= 0; i--) {
+                const pb = playerBullets[i];
+                const t = pb.target;
+
+                if (!t || !enemies.includes(t)) {
+                    pb.el.remove();
+                    playerBullets.splice(i, 1);
+                    continue;
+                }
+
+                const dx = t.x - pb.x;
+                const dy = t.y - pb.y;
+                const dist = Math.hypot(dx, dy);
+
+                if (dist <= pb.speed + 12) {
+                    // Hit target enemy!
+                    pb.el.remove();
+                    playerBullets.splice(i, 1);
+
+                    comboCount++;
+                    const points = 10 + Math.min(20, (comboCount - 1) * 5);
+                    gameScore += points;
+                    defeatedCount++;
+
+                    // Wave progression every 5 defeated enemies
+                    if (defeatedCount % 5 === 0) {
+                        currentWave++;
+                        waveEl.innerText = currentWave;
+                        spawnFloatingText(container.clientWidth / 2, 70, `⚡ เข้าสู่ Wave ${currentWave}!`, "text-purple-300 text-2xl");
+                    }
+
+                    scoreEl.innerText = gameScore;
+                    updateComboUI();
+                    spawnFloatingText(t.x, t.y - 20, `+${points} คะแนน!`, "text-emerald-300");
+
+                    // Destroy enemy element
+                    t.el.classList.add('animate-pop');
+                    const idx = enemies.indexOf(t);
+                    if (idx !== -1) enemies.splice(idx, 1);
+                    setTimeout(() => { if (t.el.parentNode) t.el.remove(); }, 180);
+
+                    // Spawn replacement if screen is empty
+                    if (enemies.length === 0 && isGameRunning) {
+                        setTimeout(() => { if (isGameRunning && enemies.length === 0) spawnEnemy(); }, 350);
+                    }
+                    updateTargetSelection();
+                } else {
+                    pb.x += (dx / dist) * pb.speed;
+                    pb.y += (dy / dist) * pb.speed;
+                    pb.el.style.left = pb.x + 'px';
+                    pb.el.style.top = pb.y + 'px';
+                }
+            }
+
+            // 2. Update Enemy Counter Bullets
+            const origin = getTowerOrigin();
+            for (let i = enemyBullets.length - 1; i >= 0; i--) {
+                const eb = enemyBullets[i];
+                eb.x += eb.vx;
+                eb.y += eb.vy;
+                eb.el.style.left = eb.x + 'px';
+                eb.el.style.top = eb.y + 'px';
+
+                if (Math.hypot(eb.x - origin.x, eb.y - origin.y) < 35) {
+                    eb.el.remove();
+                    enemyBullets.splice(i, 1);
+                    damageTower(15, "โดนยิงสวน");
+                    if (!isGameRunning) return;
+                    continue;
+                }
+
+                if (eb.x < -20 || eb.x > container.clientWidth + 50 || eb.y < -20 || eb.y > container.clientHeight + 50) {
+                    eb.el.remove();
+                    enemyBullets.splice(i, 1);
+                }
+            }
+
+            // 3. Update Enemies marching toward the Fortress
+            const defenseLineX = 135;
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const enemy = enemies[i];
+                if (!enemy.lockedForDestroy) {
+                    enemy.x += enemy.vx;
+                    enemy.el.style.left = enemy.x + 'px';
+                    enemy.el.style.top = enemy.y + 'px';
+
+                    // Check if enemy breached the defense line
+                    if (enemy.x <= defenseLineX) {
+                        enemy.el.remove();
+                        enemies.splice(i, 1);
+                        if (selectedEnemyId === enemy.id) selectedEnemyId = null;
+
+                        comboCount = 0;
+                        updateComboUI();
+                        damageTower(20, "ศัตรูบุกถึงป้อม!");
+                        if (!isGameRunning) return;
+
+                        if (enemies.length === 0) {
+                            spawnEnemy();
+                        }
+                        updateTargetSelection();
+                    }
+                }
+            }
+
+            // Keep turret aimed at active target
+            const currentTarget = getActiveTargetEnemy();
+            if (currentTarget) {
+                aimTurretAt(currentTarget.x, currentTarget.y);
+            }
+
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        function clearEntities() {
+            enemies.forEach(e => e.el.remove());
+            enemyBullets.forEach(b => b.el.remove());
+            playerBullets.forEach(b => b.el.remove());
+            container.querySelectorAll('.floating-text').forEach(f => f.remove());
+            enemies = [];
+            enemyBullets = [];
+            playerBullets = [];
+        }
+
+        // --- QUIZ LOGIC (SINGLE QUESTION VIEW) ---
+        const quizData = [
+            {
+                q: "1. ตัวละคร Nakroth ในเกม RoV ต้องการซื้อไอเทมดาบ ราคา 2,000 โกลด์ คำสั่งในข้อใดใช้ตรวจสอบว่า Nakroth \"มีเงินพอซื้อ\" (มีเงินเท่ากับหรือมากกว่า) ได้อย่างถูกต้อง",
+                options: ["gold == 2000", "gold > 2000", "gold <= 2000", "gold >= 2000"],
+                ans: 3,
+                exp: "การมีเงินพอซื้อ หมายถึงต้องมีเงินมากกว่าหรือเท่ากับราคาสินค้า จึงใช้ >="
+            },
+            {
+                q: "2. ในเกม Valorant เอเจนต์ Jett มีพลังชีวิต (HP) 100 หน่วย โดนยิงเข้าลำตัว 1 นัด สร้างความเสียหาย 40 หน่วย โค้ดในข้อใดตรวจสอบว่า Jett \"ถูกกำจัด\" (HP เหลือ 0 หรือต่ำกว่า 0) ได้อย่างถูกต้อง",
+                options: ["100 - 40 == 0", "100 - 40 != 0", "100 - 40 <= 0", "100 - 40 > 0"],
+                ans: 2,
+                exp: "คำนวณพลังชีวิตที่เหลือ 100 - 40 และเช็คว่าน้อยกว่าหรือเท่ากับ 0 หรือไม่ (<= 0)"
+            },
+            {
+                q: "3. ผู้เล่นเกม Minecraft ต้องการคราฟต์เตียงนอน ซึ่งต้องใช้ขนแกะ (wool) 3 บล็อกพอดี โค้ดในข้อใดเขียนเปรียบเทียบได้ถูกต้อง ไม่เกิด Error",
+                options: ["wool = 3", "wool == 3", "wool === 3", "wool => 3"],
+                ans: 1,
+                exp: "การเปรียบเทียบความเท่ากันใน Python ต้องใช้เครื่องหมาย == ส่วน = ตัวเดียวคือการกำหนดค่า"
+            },
+            {
+                q: "4. ระบบสุ่มกาชาของเกม จะการันตีตัวละครระดับ 5 ดาว เมื่อสุ่มครบ 90 ครั้ง โค้ดในข้อใดเช็คว่าผู้เล่น \"ยังไม่ถึง\" จุดการันตี",
+                options: ["pity != 90", "pity == 90", "pity >= 90", "pity == 0"],
+                ans: 0,
+                exp: "เครื่องหมาย != หมายถึง ไม่เท่ากับ ใช้เช็คว่าจำนวนครั้งยังไม่เท่ากับ 90"
+            },
+            {
+                q: "5. ในเกมแข่งรถ ผู้เล่นขับด้วยความเร็ว 120 กม./ชม. แต่ยางแตกทำให้ความเร็วลดลงครึ่งหนึ่ง โค้ดข้อใดเช็คว่าความเร็วที่เหลือ \"น้อยกว่า\" 70 กม./ชม. หรือไม่",
+                options: ["(120 / 2) <= 70", "(120 / 2) < 70", "(120 % 2) < 70", "(120 * 2) < 70"],
+                ans: 1,
+                exp: "ความเร็วลดลงครึ่งหนึ่งใช้การหาร (/) 2 และใช้เครื่องหมาย < เพื่อตรวจสอบว่าน้อยกว่า 70"
+            }
+        ];
+
+        let studentName = "";
+        let currentQuizIndex = 0;
+        let userAnswers = new Array(quizData.length).fill(null);
+
+        function startQuiz() {
+            const nameInput = document.getElementById('student-name').value.trim();
+            if (!nameInput) {
+                showModal('แจ้งเตือน', 'กรุณากรอกชื่อก่อนเริ่มทำแบบทดสอบครับ!');
+                return;
+            }
+            studentName = nameInput;
+            document.getElementById('display-name').innerText = studentName;
+            document.getElementById('quiz-register').classList.add('hidden');
+            
+            // Reset Quiz State
+            currentQuizIndex = 0;
+            userAnswers.fill(null);
+            
+            renderSingleQuestion();
+            document.getElementById('quiz-container').classList.remove('hidden');
+        }
+
+        function renderSingleQuestion() {
+            const item = quizData[currentQuizIndex];
+            const wrapper = document.getElementById('single-question-wrapper');
+            
+            // Update Header & Progress
+            document.getElementById('current-q-num').innerText = currentQuizIndex + 1;
+            document.getElementById('quiz-progress').style.width = `${((currentQuizIndex + 1) / quizData.length) * 100}%`;
+
+            let optionsHtml = item.options.map((opt, optIndex) => {
+                const isChecked = userAnswers[currentQuizIndex] === optIndex ? 'checked' : '';
+                return `
+                    <label class="flex items-center space-x-3 p-4 rounded-lg border border-slate-700 bg-slate-800/50 hover:bg-slate-700 cursor-pointer transition-colors w-full">
+                        <input type="radio" name="quiz-option" value="${optIndex}" ${isChecked} class="form-radio h-5 w-5 text-blue-500 bg-slate-900 border-slate-600 focus:ring-blue-500 focus:ring-offset-slate-900">
+                        <span class="font-mono text-sm sm:text-base">${opt}</span>
+                    </label>
+                `;
+            }).join('');
+
+            wrapper.innerHTML = `
+                <div class="glass-panel p-6 md:p-8 rounded-xl border border-slate-700 h-full flex flex-col justify-center">
+                    <p class="font-bold text-xl md:text-2xl mb-8 text-white leading-relaxed">${item.q}</p>
+                    <div class="grid md:grid-cols-2 gap-4">
+                        ${optionsHtml}
+                    </div>
+                </div>
+            `;
+
+            // Update Buttons
+            const nextBtn = document.getElementById('next-btn');
+            const prevBtn = document.getElementById('prev-btn');
+            
+            if (currentQuizIndex === 0) prevBtn.classList.add('hidden');
+            else prevBtn.classList.remove('hidden');
+
+            if (currentQuizIndex === quizData.length - 1) {
+                nextBtn.innerHTML = '<i class="fa-solid fa-paper-plane mr-2"></i> ส่งคำตอบ';
+                nextBtn.className = "ml-auto bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white px-8 py-3 rounded-full font-bold text-lg shadow-lg shadow-emerald-500/30 transition-transform transform hover:scale-105";
+            } else {
+                nextBtn.innerHTML = 'ข้อถัดไป <i class="fa-solid fa-angle-right ml-2"></i>';
+                nextBtn.className = "ml-auto bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-8 py-3 rounded-full font-bold text-lg shadow-lg shadow-blue-500/30 transition-transform transform hover:scale-105";
+            }
+        }
+
+        function prevQuizQuestion() {
+            if (currentQuizIndex > 0) {
+                // Save current selection if any
+                const selected = document.querySelector('input[name="quiz-option"]:checked');
+                if (selected) userAnswers[currentQuizIndex] = parseInt(selected.value);
+                
+                currentQuizIndex--;
+                renderSingleQuestion();
+            }
+        }
+
+        function nextQuizQuestion(e) {
+            e.preventDefault();
+            
+            const selected = document.querySelector('input[name="quiz-option"]:checked');
+            if (!selected) {
+                showModal('แจ้งเตือน', 'กรุณาเลือกคำตอบก่อนไปข้อถัดไปครับ');
+                return;
+            }
+            
+            // Save answer
+            userAnswers[currentQuizIndex] = parseInt(selected.value);
+
+            if (currentQuizIndex < quizData.length - 1) {
+                // Go to Next Question
+                currentQuizIndex++;
+                renderSingleQuestion();
+            } else {
+                // Submit Quiz
+                finishQuiz();
+            }
+        }
+
+        function finishQuiz() {
+            let score = 0;
+            for (let i = 0; i < quizData.length; i++) {
+                if (userAnswers[i] === quizData[i].ans) {
+                    score++;
+                }
+            }
+
+            // Show results
+            document.getElementById('quiz-container').classList.add('hidden');
+            
+            document.getElementById('result-name').innerText = studentName;
+            document.getElementById('result-score').innerText = score;
+            
+            const icon = document.getElementById('result-icon');
+            if(score === 5) {
+                icon.className = "fa-solid fa-crown text-5xl text-yellow-400";
+            } else if (score >= 3) {
+                icon.className = "fa-solid fa-thumbs-up text-5xl text-blue-400";
+            } else {
+                icon.className = "fa-solid fa-book-open-reader text-5xl text-red-400";
+            }
+
+            // Render Keys
+            const keyContainer = document.getElementById('answer-key');
+            keyContainer.innerHTML = '<h3 class="font-bold text-lg text-white border-b border-slate-700 pb-2 mb-4">เฉลยและคำอธิบาย</h3>';
+            quizData.forEach((item, index) => {
+                const userChoice = userAnswers[index];
+                const isCorrect = userChoice === item.ans;
+                const correctOptText = item.options[item.ans];
+                const userChoiceText = userChoice !== null ? item.options[userChoice] : "ไม่ได้ตอบ";
+
+                keyContainer.innerHTML += `
+                    <div class="mb-4 pb-4 border-b border-slate-800 last:border-0">
+                        <p class="font-medium text-slate-300 mb-2">ข้อ ${index + 1}: ${isCorrect ? '<span class="text-emerald-400"><i class="fa-solid fa-check"></i> ถูกต้อง</span>' : '<span class="text-red-400"><i class="fa-solid fa-xmark"></i> ผิด</span>'}</p>
+                        ${!isCorrect ? `<p class="text-sm font-mono text-red-400 mb-1">คำตอบของคุณ: ${userChoiceText}</p>` : ''}
+                        <p class="text-sm font-mono text-emerald-400 mb-2">เฉลย: ${correctOptText}</p>
+                        <p class="text-sm text-slate-400"><i class="fa-solid fa-lightbulb text-yellow-500 mr-1"></i> ${item.exp}</p>
+                    </div>
+                `;
+            });
+
+            document.getElementById('quiz-result').classList.remove('hidden');
+            window.scrollTo(0, 0);
+        }
+
+        function resetQuiz() {
+            document.getElementById('quiz-result').classList.add('hidden');
+            document.getElementById('student-name').value = '';
+            document.getElementById('quiz-register').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
