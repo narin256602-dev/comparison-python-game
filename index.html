@@ -437,7 +437,7 @@
         <section id="game" class="section-content">
             <div class="text-center mb-6">
                 <h1 class="text-3xl md:text-4xl font-bold mb-2">🏰 เกมป้องกันป้อมชายหาด <span class="text-blue-400">Comparison TD</span></h1>
-                <p class="text-slate-400">ศัตรูถือป้ายเงื่อนไขบุกเข้าหาป้อม! กดตัดสินใจว่า <span class="text-emerald-400 font-bold">True</span> หรือ <span class="text-red-400 font-bold">False</span> เพื่อสั่งป้อมยิงสกัด (คลิกเปลี่ยนเป้าหมายได้)</p>
+                <p class="text-slate-400">ดูโจทย์ด้านบน ใช้เมาส์เล็งปืนใหญ่แล้ว <strong class="text-yellow-300">คลิกซ้ายยิงสกัดศัตรู</strong> ที่ถือป้ายคำตอบ (<span class="text-emerald-400 font-bold">True</span> / <span class="text-red-400 font-bold">False</span>) ที่ถูกต้อง!</p>
             </div>
 
             <div class="max-w-4xl mx-auto glass-panel p-6 rounded-2xl shadow-xl">
@@ -469,15 +469,18 @@
                     </div>
                 </div>
 
-                <!-- Current Target Question Display -->
+                <!-- Current Question Display -->
                 <div id="game-status" class="text-center font-mono text-lg md:text-2xl font-bold text-white px-4 py-3 bg-slate-900/80 rounded-xl mb-4 border border-yellow-500/40 shadow-inner flex flex-wrap items-center justify-center gap-2">
                     <span>กดปุ่ม "เริ่มภารกิจป้องกันป้อม" เพื่อเริ่มเกม</span>
                 </div>
 
-                <!-- Game Canvas/Container -->
-                <div id="game-container">
+                <!-- Game Canvas/Container with Manual Mouse Aiming & Shooting -->
+                <div id="game-container" onmousemove="aimCannon(event)" onmousedown="shootCannon(event)">
                     <!-- Defense Perimeter Line -->
                     <div id="defense-line" title="แนวป้องกันป้อม"></div>
+
+                    <!-- Dotted Laser Sight -->
+                    <div id="aim-laser"></div>
 
                     <!-- Fortress Tower on Left -->
                     <div id="tower-base">
@@ -499,13 +502,13 @@
                     </div>
 
                     <!-- Overlays -->
-                    <div id="start-overlay" class="absolute inset-0 bg-slate-900/75 backdrop-blur-xs flex flex-col justify-center items-center z-30 p-6 text-center">
+                    <div id="start-overlay" class="absolute inset-0 bg-slate-900/75 backdrop-blur-xs flex flex-col justify-center items-center z-30 p-6 text-center" onmousedown="event.stopPropagation()">
                         <div class="bg-slate-800/90 border border-slate-600 p-6 rounded-2xl max-w-md shadow-2xl">
-                            <i class="fa-solid fa-chess-rook text-5xl text-blue-400 mb-3"></i>
+                            <i class="fa-solid fa-crosshairs text-5xl text-blue-400 mb-3"></i>
                             <h3 class="text-2xl font-bold text-white mb-2">ปกป้องป้อมชายหาด!</h3>
                             <p class="text-slate-300 text-sm mb-5 leading-relaxed">
-                                กองทัพศัตรูจะถือป้ายโจทย์เปรียบเทียบ Python บุกมาจากทางขวา<br>
-                                กดเลือก <strong class="text-emerald-400">True (จริง)</strong> หรือ <strong class="text-red-400">False (เท็จ)</strong> ให้ตรงกับป้ายของศัตรูที่ล็อกเป้าอยู่เพื่อสั่งป้อมปืนใหญ่ยิงทำลาย!
+                                โจทย์เงื่อนไข Python จะปรากฏด้านบน และศัตรูที่ถือป้าย <strong class="text-emerald-400">True</strong> กับ <strong class="text-red-400">False</strong> จะบุกเข้าหาป้อม!<br>
+                                <strong>เลื่อนเมาส์เพื่อเล็งปืนใหญ่</strong> และ <strong>คลิกซ้ายเพื่อยิงสกัด</strong> ศัตรูที่ถือคำตอบที่ถูกต้อง (สามารถยิงสกัดลูกไฟศัตรูกลางอากาศได้ด้วย!)
                             </p>
                             <button onclick="startGame()" class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-8 py-3.5 rounded-full font-bold text-xl shadow-xl shadow-blue-500/40 transition-transform transform hover:scale-105 cursor-pointer">
                                 <i class="fa-solid fa-play mr-2"></i> เริ่มภารกิจป้องกันป้อม
@@ -513,7 +516,7 @@
                         </div>
                     </div>
 
-                    <div id="game-over-overlay" class="absolute inset-0 bg-slate-900/90 flex flex-col justify-center items-center z-30 hidden p-6 text-center">
+                    <div id="game-over-overlay" class="absolute inset-0 bg-slate-900/90 flex flex-col justify-center items-center z-30 hidden p-6 text-center" onmousedown="event.stopPropagation()">
                         <h2 id="game-over-title" class="text-4xl font-bold text-white mb-2">จบภารกิจ!</h2>
                         <p id="game-over-sub" class="text-slate-400 mb-4">คุณป้องกันป้อมจนถึง Wave ที่ <span id="final-game-wave" class="text-purple-400 font-bold">1</span></p>
                         <p class="text-xl text-slate-300 mb-6">คะแนนรวม: <span id="final-game-score" class="text-yellow-400 font-bold text-4xl">0</span> คะแนน</p>
@@ -528,23 +531,16 @@
                     </div>
                 </div>
 
-                <!-- Player Answer Controls (True / False) -->
-                <div class="mt-4 grid grid-cols-2 gap-4">
-                    <button id="btn-ans-true" onclick="submitDefenseAnswer(true)" disabled class="group bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 disabled:opacity-40 disabled:cursor-not-allowed text-white py-4 px-6 rounded-xl font-bold text-xl md:text-2xl shadow-lg shadow-emerald-900/40 border-b-4 border-emerald-800 active:translate-y-0.5 transition-all flex items-center justify-center gap-3 cursor-pointer">
-                        <i class="fa-solid fa-circle-check text-2xl md:text-3xl group-hover:scale-110 transition-transform"></i>
-                        <div class="text-left">
-                            <span class="block leading-none">True (จริง)</span>
-                            <span class="text-xs font-normal text-emerald-100 opacity-80">กดปุ่มลูกศรซ้าย ⬅️ หรือปุ่ม T</span>
-                        </div>
-                    </button>
-
-                    <button id="btn-ans-false" onclick="submitDefenseAnswer(false)" disabled class="group bg-gradient-to-r from-red-600 to-rose-500 hover:from-red-500 hover:to-rose-400 disabled:opacity-40 disabled:cursor-not-allowed text-white py-4 px-6 rounded-xl font-bold text-xl md:text-2xl shadow-lg shadow-red-900/40 border-b-4 border-red-800 active:translate-y-0.5 transition-all flex items-center justify-center gap-3 cursor-pointer">
-                        <i class="fa-solid fa-circle-xmark text-2xl md:text-3xl group-hover:scale-110 transition-transform"></i>
-                        <div class="text-left">
-                            <span class="block leading-none">False (เท็จ)</span>
-                            <span class="text-xs font-normal text-red-100 opacity-80">กดปุ่มลูกศรขวา ➡️ หรือปุ่ม F</span>
-                        </div>
-                    </button>
+                <!-- Control Hint Bar -->
+                <div class="mt-4 bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-3 flex flex-wrap justify-between items-center text-sm text-slate-300 gap-2">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-computer-mouse text-blue-400 text-lg"></i>
+                        <span><strong>วิธีควบคุม:</strong> เลื่อนเมาส์เล็งเป้า • คลิกซ้ายยิงกระสุนปืนใหญ่</span>
+                    </div>
+                    <div class="flex items-center gap-4 text-xs sm:text-sm">
+                        <span class="text-emerald-400"><i class="fa-solid fa-check mr-1"></i>ยิงถูกตัว: +10 คะแนน (เปลี่ยนโจทย์ถัดไป)</span>
+                        <span class="text-red-400"><i class="fa-solid fa-triangle-exclamation mr-1"></i>ยิงผิดตัว / ศัตรูถึงป้อม: ป้อมเสีย HP!</span>
+                    </div>
                 </div>
             </div>
         </section>
@@ -716,7 +712,7 @@
             showKSlide(0);
         });
 
-        // --- GAME LOGIC (TOWER DEFENSE) ---
+        // --- GAME LOGIC (TOWER DEFENSE - MANUAL MOUSE AIM & SHOOT) ---
         const gameQuestions = [
             { q: "10 % 3 == 1", ans: true },
             { q: "5 ** 2 < 20", ans: false },
@@ -737,9 +733,9 @@
         ];
 
         const enemyTypes = [
-            { name: 'Sky Drone', icon: 'fa-helicopter', laneY: [85, 145], color: 'from-sky-500 to-blue-700', speedMult: 1.15 },
-            { name: 'Pirate Ship', icon: 'fa-ship', laneY: [220, 290], color: 'from-amber-500 to-red-700', speedMult: 0.95 },
-            { name: 'Crab Bot', icon: 'fa-robot', laneY: [355, 410], color: 'from-purple-500 to-indigo-800', speedMult: 1.0 }
+            { name: 'Sky Drone', icon: 'fa-helicopter', laneY: 110, color: 'from-sky-500 to-blue-700', speedMult: 1.1 },
+            { name: 'Pirate Ship', icon: 'fa-ship', laneY: 245, color: 'from-amber-500 to-red-700', speedMult: 0.95 },
+            { name: 'Crab Bot', icon: 'fa-robot', laneY: 375, color: 'from-purple-500 to-indigo-800', speedMult: 1.0 }
         ];
 
         let gameScore = 0;
@@ -749,11 +745,11 @@
         let defeatedCount = 0;
         let comboCount = 0;
         let gameInterval;
-        let spawnTimer = 0;
         let isGameRunning = false;
+        let isTransitioningQuestion = false;
+        let currentQuestion = null;
+        let currentAimAngle = 0;
         let animationFrameId;
-        let enemyIdCounter = 1;
-        let selectedEnemyId = null;
 
         // Game Entities
         let enemies = [];
@@ -770,10 +766,9 @@
         const hpText = document.getElementById('hp-text');
         const cannonBarrel = document.getElementById('cannon-barrel');
         const towerBase = document.getElementById('tower-base');
-        const btnTrue = document.getElementById('btn-ans-true');
-        const btnFalse = document.getElementById('btn-ans-false');
+        const aimLaser = document.getElementById('aim-laser');
 
-        // Tower muzzle origin relative to container
+        // Tower pivot coordinate inside #game-container
         function getTowerOrigin() {
             return {
                 x: 86,
@@ -792,8 +787,7 @@
             currentWave = 1;
             defeatedCount = 0;
             comboCount = 0;
-            spawnTimer = 0;
-            selectedEnemyId = null;
+            isTransitioningQuestion = false;
 
             scoreEl.innerText = gameScore;
             timeEl.innerText = gameTime;
@@ -803,12 +797,9 @@
             
             clearEntities();
             isGameRunning = true;
-            btnTrue.disabled = false;
-            btnFalse.disabled = false;
+            aimLaser.style.display = 'block';
             
-            // Spawn initial wave enemies
-            spawnEnemy();
-            setTimeout(() => { if (isGameRunning) spawnEnemy(); }, 1200);
+            nextQuestion();
 
             clearInterval(gameInterval);
             gameInterval = setInterval(gameTick, 1000);
@@ -821,8 +812,7 @@
             clearInterval(gameInterval);
             cancelAnimationFrame(animationFrameId);
             clearEntities();
-            btnTrue.disabled = true;
-            btnFalse.disabled = true;
+            aimLaser.style.display = 'none';
             document.getElementById('start-overlay').classList.remove('hidden');
             statusEl.innerHTML = `<span>กดปุ่ม "เริ่มภารกิจป้องกันป้อม" เพื่อเริ่มเกม</span>`;
         }
@@ -831,15 +821,20 @@
             if (!isGameRunning) return;
             gameTime--;
             timeEl.innerText = gameTime;
-            spawnTimer++;
 
-            // Spawn rate scales with wave
-            const maxEnemiesOnScreen = Math.min(5, 2 + currentWave);
-            const spawnIntervalSec = Math.max(2, 4 - Math.floor(currentWave / 2));
+            // Ensure both True and False enemies exist on screen so the player always has targets
+            if (!isTransitioningQuestion) {
+                const hasTrue = enemies.some(e => e.isTrue === true);
+                const hasFalse = enemies.some(e => e.isTrue === false);
+                if (!hasTrue) spawnEnemy(true);
+                if (!hasFalse) spawnEnemy(false);
 
-            if (enemies.length === 0 || (enemies.length < maxEnemiesOnScreen && spawnTimer >= spawnIntervalSec)) {
-                spawnEnemy();
-                spawnTimer = 0;
+                // Enemies occasionally fire projectiles toward the fortress
+                enemies.forEach(enemy => {
+                    if (enemy.x < container.clientWidth - 40 && Math.random() < 0.28) {
+                        spawnEnemyBullet(enemy.x - 20, enemy.y);
+                    }
+                });
             }
 
             if (gameTime <= 0) {
@@ -892,8 +887,7 @@
             isGameRunning = false;
             clearInterval(gameInterval);
             cancelAnimationFrame(animationFrameId);
-            btnTrue.disabled = true;
-            btnFalse.disabled = true;
+            aimLaser.style.display = 'none';
             
             document.getElementById('game-over-title').innerText = titleStr;
             document.getElementById('final-game-wave').innerText = currentWave;
@@ -901,150 +895,78 @@
             document.getElementById('game-over-overlay').classList.remove('hidden');
         }
 
-        function spawnEnemy() {
+        function nextQuestion() {
+            if (!isGameRunning) return;
+            isTransitioningQuestion = false;
+
+            // Pick a new question different from the previous one
+            const pool = gameQuestions.filter(item => !currentQuestion || item.q !== currentQuestion.q);
+            currentQuestion = pool[Math.floor(Math.random() * pool.length)];
+
+            statusEl.innerHTML = `
+                <span class="text-xs uppercase tracking-wider bg-blue-500/20 text-blue-300 border border-blue-500/40 px-3 py-1 rounded-full">🎯 โจทย์เงื่อนไข</span>
+                <span class="text-yellow-300 text-xl md:text-2xl tracking-wide">${currentQuestion.q}</span>
+            `;
+
+            // Clear old enemies and spawn a fresh wave of True & False enemies in distinct lanes
+            enemies.forEach(e => e.el.remove());
+            enemies = [];
+
+            // Shuffle lanes so True and False appear in different lanes without overlapping
+            const shuffledLanes = [...enemyTypes].sort(() => Math.random() - 0.5);
+            spawnEnemy(true, shuffledLanes[0], 0);
+            spawnEnemy(false, shuffledLanes[1], 70);
+
+            // From Wave 2 onwards, spawn an extra decoy enemy in the 3rd lane
+            if (currentWave >= 2) {
+                spawnEnemy(!currentQuestion.ans, shuffledLanes[2], 140);
+            }
+        }
+
+        function spawnEnemy(isTrue, forcedType = null, extraOffsetX = 0) {
             if (!isGameRunning) return;
 
-            // Pick a question not currently displayed if possible
-            const activeQs = enemies.map(e => e.question.q);
-            const availableQs = gameQuestions.filter(item => !activeQs.includes(item.q));
-            const pool = availableQs.length > 0 ? availableQs : gameQuestions;
-            const qObj = pool[Math.floor(Math.random() * pool.length)];
+            // Pick a lane that isn't crowded if not forced
+            const usedLanes = enemies.map(e => e.type.name);
+            const availableTypes = enemyTypes.filter(t => !usedLanes.includes(t.name));
+            const type = forcedType || (availableTypes.length > 0
+                ? availableTypes[Math.floor(Math.random() * availableTypes.length)]
+                : enemyTypes[Math.floor(Math.random() * enemyTypes.length)]);
 
-            const type = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
-            const id = enemyIdCounter++;
+            const startX = (container.clientWidth || 800) + 50 + extraOffsetX + Math.random() * 40;
+            const startY = type.laneY + (Math.random() * 24 - 12);
 
-            const startX = (container.clientWidth || 800) + 55;
-            const minY = type.laneY[0];
-            const maxY = type.laneY[1];
-            const startY = minY + Math.random() * (maxY - minY);
-
-            // Base speed scales gently with wave
-            const baseSpeed = (0.45 + (currentWave - 1) * 0.08) * type.speedMult;
+            // Speed scales gently with wave
+            const speed = (0.75 + (currentWave - 1) * 0.12) * type.speedMult;
 
             const el = document.createElement('div');
             el.className = 'td-enemy';
             el.style.left = startX + 'px';
             el.style.top = startY + 'px';
             el.innerHTML = `
-                <div class="td-enemy-sign">
-                    <span class="td-enemy-badge">🎯 เป้าหมาย</span>
-                    <span>${qObj.q}</span>
+                <div class="td-enemy-sign ${isTrue ? 'td-sign-true' : 'td-sign-false'}">
+                    <i class="fa-solid ${isTrue ? 'fa-check' : 'fa-xmark'}"></i>
+                    <span>${isTrue ? 'True' : 'False'}</span>
                 </div>
                 <div class="td-enemy-body bg-gradient-to-br ${type.color}">
                     <i class="fa-solid ${type.icon}"></i>
                 </div>
             `;
 
-            // Allow clicking an enemy to manually lock onto it
-            el.addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (!isGameRunning) return;
-                selectedEnemyId = id;
-                updateTargetSelection();
-            });
-
             container.appendChild(el);
             enemies.push({
-                id,
                 el,
                 x: startX,
                 y: startY,
-                vx: -baseSpeed,
-                question: qObj,
+                vx: -speed,
+                isTrue,
                 type,
-                lockedForDestroy: false
-            });
-
-            updateTargetSelection();
-        }
-
-        function getActiveTargetEnemy() {
-            const validEnemies = enemies.filter(e => !e.lockedForDestroy);
-            if (validEnemies.length === 0) return null;
-
-            // If user manually selected a valid enemy, keep it
-            if (selectedEnemyId !== null) {
-                const found = validEnemies.find(e => e.id === selectedEnemyId);
-                if (found) return found;
-            }
-
-            // Otherwise auto-target the closest enemy to the fortress (lowest x)
-            validEnemies.sort((a, b) => a.x - b.x);
-            selectedEnemyId = validEnemies[0].id;
-            return validEnemies[0];
-        }
-
-        function updateTargetSelection() {
-            const target = getActiveTargetEnemy();
-            enemies.forEach(e => {
-                if (target && e.id === target.id) {
-                    e.el.classList.add('targeted');
-                } else {
-                    e.el.classList.remove('targeted');
-                }
-            });
-
-            if (target) {
-                statusEl.innerHTML = `
-                    <span class="text-xs uppercase tracking-wider bg-yellow-500/20 text-yellow-300 border border-yellow-500/40 px-2.5 py-1 rounded-full">🎯 เป้าหมายล็อก</span>
-                    <span class="text-yellow-300 text-xl md:text-2xl tracking-wide">${target.question.q}</span>
-                `;
-                aimTurretAt(target.x, target.y);
-            } else {
-                statusEl.innerHTML = `<span class="text-slate-400">กำลังสแกนหาศัตรูระลอกถัดไป...</span>`;
-            }
-        }
-
-        function aimTurretAt(targetX, targetY) {
-            const origin = getTowerOrigin();
-            const angleDeg = Math.atan2(targetY - origin.y, targetX - origin.x) * 180 / Math.PI;
-            const clampedAngle = Math.max(-65, Math.min(45, angleDeg));
-            cannonBarrel.style.transform = `rotate(${clampedAngle}deg)`;
-        }
-
-        function submitDefenseAnswer(userChoice) {
-            if (!isGameRunning) return;
-            const target = getActiveTargetEnemy();
-            if (!target) return;
-
-            aimTurretAt(target.x, target.y);
-
-            if (userChoice === target.question.ans) {
-                // Correct Answer -> Lock target & fire cannonball to destroy it
-                target.lockedForDestroy = true;
-                selectedEnemyId = null;
-                firePlayerProjectile(target);
-                updateTargetSelection();
-            } else {
-                // Wrong Answer -> Reset combo & enemy counter-attacks fortress
-                comboCount = 0;
-                updateComboUI();
-                gameScore = Math.max(0, gameScore - 5);
-                scoreEl.innerText = gameScore;
-
-                spawnFloatingText(target.x, target.y - 30, "ตอบผิด! ศัตรูยิงสวน!", "text-red-400");
-                spawnEnemyCounterBullet(target.x, target.y);
-            }
-        }
-
-        function firePlayerProjectile(targetEnemy) {
-            const origin = getTowerOrigin();
-            const el = document.createElement('div');
-            el.className = 'player-bullet';
-            el.style.left = origin.x + 'px';
-            el.style.top = origin.y + 'px';
-            container.appendChild(el);
-
-            playerBullets.push({
-                el,
-                x: origin.x,
-                y: origin.y,
-                target: targetEnemy,
-                speed: 15
+                hitWidth: 96,
+                hitHeight: 84
             });
         }
 
-        function spawnEnemyCounterBullet(startX, startY) {
+        function spawnEnemyBullet(startX, startY) {
             const origin = getTowerOrigin();
             const el = document.createElement('div');
             el.className = 'enemy-bullet';
@@ -1053,7 +975,7 @@
             container.appendChild(el);
 
             const angle = Math.atan2(origin.y - startY, origin.x - startX);
-            const speed = 10;
+            const speed = 3.2 + Math.min(2, (currentWave - 1) * 0.25);
 
             enemyBullets.push({
                 el,
@@ -1064,89 +986,179 @@
             });
         }
 
+        // Manual Mouse Aiming
+        function aimCannon(e) {
+            if (!isGameRunning) return;
+            const rect = container.getBoundingClientRect();
+            const origin = getTowerOrigin();
+
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            const angleRad = Math.atan2(mouseY - origin.y, mouseX - origin.x);
+            const angleDeg = angleRad * 180 / Math.PI;
+            currentAimAngle = angleRad;
+
+            cannonBarrel.style.transform = `rotate(${angleDeg}deg)`;
+
+            // Update Laser Sight Line
+            const dist = Math.hypot(mouseX - origin.x, mouseY - origin.y);
+            aimLaser.style.left = origin.x + 'px';
+            aimLaser.style.top = origin.y + 'px';
+            aimLaser.style.width = Math.max(0, dist) + 'px';
+            aimLaser.style.transform = `rotate(${angleDeg}deg)`;
+        }
+
+        // Manual Mouse Left-Click Shooting
+        function shootCannon(e) {
+            if (!isGameRunning) return;
+            const rect = container.getBoundingClientRect();
+            const origin = getTowerOrigin();
+
+            const targetX = e.clientX - rect.left;
+            const targetY = e.clientY - rect.top;
+
+            const angleRad = Math.atan2(targetY - origin.y, targetX - origin.x);
+            currentAimAngle = angleRad;
+            const angleDeg = angleRad * 180 / Math.PI;
+            cannonBarrel.style.transform = `rotate(${angleDeg}deg)`;
+
+            // Spawn bullet from the tip of the cannon barrel (58px length)
+            const barrelLength = 58;
+            const startX = origin.x + Math.cos(angleRad) * barrelLength;
+            const startY = origin.y + Math.sin(angleRad) * barrelLength;
+            const speed = 14;
+
+            const el = document.createElement('div');
+            el.className = 'player-bullet';
+            el.style.left = startX + 'px';
+            el.style.top = startY + 'px';
+            container.appendChild(el);
+
+            playerBullets.push({
+                el,
+                x: startX,
+                y: startY,
+                vx: Math.cos(angleRad) * speed,
+                vy: Math.sin(angleRad) * speed
+            });
+        }
+
         function damageTower(amount, reasonText) {
             towerHP -= amount;
             updateHPUI();
             shakeTower();
             const origin = getTowerOrigin();
-            spawnFloatingText(origin.x + 10, origin.y - 30, `-${amount} HP (${reasonText})`, "text-red-400");
+            spawnFloatingText(origin.x + 25, origin.y - 35, `-${amount} HP (${reasonText})`, "text-red-400");
 
             if (towerHP <= 0) {
                 endGame("💥 ป้อมปราการถูกทำลาย!");
             }
         }
 
-        // Keyboard shortcuts for True (ArrowLeft / KeyT) and False (ArrowRight / KeyF)
-        document.addEventListener('keydown', (e) => {
-            if (!isGameRunning) return;
-            if (e.key === 'ArrowLeft' || e.key === 't' || e.key === 'T') {
-                e.preventDefault();
-                submitDefenseAnswer(true);
-            } else if (e.key === 'ArrowRight' || e.key === 'f' || e.key === 'F') {
-                e.preventDefault();
-                submitDefenseAnswer(false);
-            }
-        });
-
         function gameLoop() {
             if (!isGameRunning) return;
 
-            // 1. Update Homing Player Bullets
+            // 1. Update Player Bullets & Check Collisions
             for (let i = playerBullets.length - 1; i >= 0; i--) {
                 const pb = playerBullets[i];
-                const t = pb.target;
+                pb.x += pb.vx;
+                pb.y += pb.vy;
+                pb.el.style.left = pb.x + 'px';
+                pb.el.style.top = pb.y + 'px';
 
-                if (!t || !enemies.includes(t)) {
+                // Remove if out of bounds
+                if (pb.x < -20 || pb.x > container.clientWidth + 30 || pb.y < -20 || pb.y > container.clientHeight + 30) {
                     pb.el.remove();
                     playerBullets.splice(i, 1);
                     continue;
                 }
 
-                const dx = t.x - pb.x;
-                const dy = t.y - pb.y;
-                const dist = Math.hypot(dx, dy);
-
-                if (dist <= pb.speed + 12) {
-                    // Hit target enemy!
-                    pb.el.remove();
-                    playerBullets.splice(i, 1);
-
-                    comboCount++;
-                    const points = 10 + Math.min(20, (comboCount - 1) * 5);
-                    gameScore += points;
-                    defeatedCount++;
-
-                    // Wave progression every 5 defeated enemies
-                    if (defeatedCount % 5 === 0) {
-                        currentWave++;
-                        waveEl.innerText = currentWave;
-                        spawnFloatingText(container.clientWidth / 2, 70, `⚡ เข้าสู่ Wave ${currentWave}!`, "text-purple-300 text-2xl");
+                // Check if player bullet intercepts an incoming enemy projectile
+                let hitEnemyBullet = false;
+                for (let k = enemyBullets.length - 1; k >= 0; k--) {
+                    const eb = enemyBullets[k];
+                    if (Math.hypot(pb.x - eb.x, pb.y - eb.y) < 18) {
+                        eb.el.remove();
+                        enemyBullets.splice(k, 1);
+                        pb.el.remove();
+                        playerBullets.splice(i, 1);
+                        gameScore += 2;
+                        scoreEl.innerText = gameScore;
+                        spawnFloatingText(eb.x, eb.y, "+2 สกัดกระสุน!", "text-sky-300 text-sm");
+                        hitEnemyBullet = true;
+                        break;
                     }
+                }
+                if (hitEnemyBullet) continue;
 
-                    scoreEl.innerText = gameScore;
-                    updateComboUI();
-                    spawnFloatingText(t.x, t.y - 20, `+${points} คะแนน!`, "text-emerald-300");
+                // Check collision with Enemies (centered hitbox using enemy.x, enemy.y)
+                for (let j = enemies.length - 1; j >= 0; j--) {
+                    const enemy = enemies[j];
+                    if (
+                        Math.abs(pb.x - enemy.x) < enemy.hitWidth / 2 &&
+                        Math.abs(pb.y - enemy.y) < enemy.hitHeight / 2
+                    ) {
+                        // Bullet Hit Enemy!
+                        pb.el.remove();
+                        playerBullets.splice(i, 1);
 
-                    // Destroy enemy element
-                    t.el.classList.add('animate-pop');
-                    const idx = enemies.indexOf(t);
-                    if (idx !== -1) enemies.splice(idx, 1);
-                    setTimeout(() => { if (t.el.parentNode) t.el.remove(); }, 180);
+                        enemy.el.classList.add('animate-pop');
+                        const hitX = enemy.x;
+                        const hitY = enemy.y;
+                        const hitIsTrue = enemy.isTrue;
 
-                    // Spawn replacement if screen is empty
-                    if (enemies.length === 0 && isGameRunning) {
-                        setTimeout(() => { if (isGameRunning && enemies.length === 0) spawnEnemy(); }, 350);
+                        // Remove hit enemy
+                        setTimeout(() => { if (enemy.el.parentNode) enemy.el.remove(); }, 160);
+                        enemies.splice(j, 1);
+
+                        if (currentQuestion && hitIsTrue === currentQuestion.ans) {
+                            // Correct Answer Enemy Shot!
+                            comboCount++;
+                            const points = 10 + Math.min(20, (comboCount - 1) * 5);
+                            gameScore += points;
+                            defeatedCount++;
+                            scoreEl.innerText = gameScore;
+                            updateComboUI();
+
+                            spawnFloatingText(hitX, hitY - 20, `🎯 ถูกต้อง! +${points}`, "text-emerald-300");
+
+                            if (defeatedCount % 4 === 0) {
+                                currentWave++;
+                                waveEl.innerText = currentWave;
+                                spawnFloatingText(container.clientWidth / 2, 70, `⚡ เลื่อนขั้นเป็น Wave ${currentWave}!`, "text-purple-300 text-2xl");
+                            }
+
+                            // Clear remaining decoy enemies & enemy bullets from this wave and load next question
+                            isTransitioningQuestion = true;
+                            enemies.forEach(rem => {
+                                rem.el.classList.add('animate-pop');
+                                setTimeout(() => { if (rem.el.parentNode) rem.el.remove(); }, 150);
+                            });
+                            enemies = [];
+                            enemyBullets.forEach(eb => eb.el.remove());
+                            enemyBullets = [];
+
+                            setTimeout(() => {
+                                if (isGameRunning) nextQuestion();
+                            }, 320);
+                        } else {
+                            // Wrong Answer Enemy Shot!
+                            comboCount = 0;
+                            updateComboUI();
+                            gameScore = Math.max(0, gameScore - 5);
+                            scoreEl.innerText = gameScore;
+
+                            spawnFloatingText(hitX, hitY - 20, "❌ ยิงผิดตัว! -5", "text-red-400");
+                            damageTower(15, "ยิงผิดคำตอบ");
+                            if (!isGameRunning) return;
+                        }
+                        break;
                     }
-                    updateTargetSelection();
-                } else {
-                    pb.x += (dx / dist) * pb.speed;
-                    pb.y += (dy / dist) * pb.speed;
-                    pb.el.style.left = pb.x + 'px';
-                    pb.el.style.top = pb.y + 'px';
                 }
             }
 
-            // 2. Update Enemy Counter Bullets
+            // 2. Update Enemy Bullets
             const origin = getTowerOrigin();
             for (let i = enemyBullets.length - 1; i >= 0; i--) {
                 const eb = enemyBullets[i];
@@ -1155,10 +1167,11 @@
                 eb.el.style.left = eb.x + 'px';
                 eb.el.style.top = eb.y + 'px';
 
-                if (Math.hypot(eb.x - origin.x, eb.y - origin.y) < 35) {
+                // Check collision with Fortress Tower
+                if (eb.x <= 125 && Math.abs(eb.y - origin.y) < 65) {
                     eb.el.remove();
                     enemyBullets.splice(i, 1);
-                    damageTower(15, "โดนยิงสวน");
+                    damageTower(8, "ถูกกระสุนศัตรู");
                     if (!isGameRunning) return;
                     continue;
                 }
@@ -1169,38 +1182,29 @@
                 }
             }
 
-            // 3. Update Enemies marching toward the Fortress
+            // 3. Update Enemies advancing toward the Fortress
             const defenseLineX = 135;
             for (let i = enemies.length - 1; i >= 0; i--) {
                 const enemy = enemies[i];
-                if (!enemy.lockedForDestroy) {
-                    enemy.x += enemy.vx;
-                    enemy.el.style.left = enemy.x + 'px';
-                    enemy.el.style.top = enemy.y + 'px';
+                enemy.x += enemy.vx;
+                enemy.el.style.left = enemy.x + 'px';
+                enemy.el.style.top = enemy.y + 'px';
 
-                    // Check if enemy breached the defense line
-                    if (enemy.x <= defenseLineX) {
-                        enemy.el.remove();
-                        enemies.splice(i, 1);
-                        if (selectedEnemyId === enemy.id) selectedEnemyId = null;
+                // If enemy breaches the defense line
+                if (enemy.x <= defenseLineX) {
+                    const breachedIsTrue = enemy.isTrue;
+                    const breachedType = enemy.type;
+                    enemy.el.remove();
+                    enemies.splice(i, 1);
 
-                        comboCount = 0;
-                        updateComboUI();
-                        damageTower(20, "ศัตรูบุกถึงป้อม!");
-                        if (!isGameRunning) return;
+                    comboCount = 0;
+                    updateComboUI();
+                    damageTower(15, "ศัตรูบุกถึงป้อม!");
+                    if (!isGameRunning) return;
 
-                        if (enemies.length === 0) {
-                            spawnEnemy();
-                        }
-                        updateTargetSelection();
-                    }
+                    // Respawn the enemy on the right so the player still has both True/False targets
+                    spawnEnemy(breachedIsTrue, breachedType, 20);
                 }
-            }
-
-            // Keep turret aimed at active target
-            const currentTarget = getActiveTargetEnemy();
-            if (currentTarget) {
-                aimTurretAt(currentTarget.x, currentTarget.y);
             }
 
             animationFrameId = requestAnimationFrame(gameLoop);
